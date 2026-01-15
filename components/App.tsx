@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Bell, LogOut, Settings, Monitor, AppWindow, Home, HelpCircle, Wifi, Cpu, Shield, Loader2 } from 'lucide-react';
+import { Cloud, Search, Bell, LogOut, Settings, Monitor, AppWindow, Home, HelpCircle, Wifi, Cpu, Shield, Loader2, Minus, Square, X } from 'lucide-react';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import VDIViewer from './components/VDIViewer';
@@ -92,8 +92,8 @@ const App: React.FC = () => {
       {/* Left Rail - App Navigation */}
       <aside className="w-20 bg-white dark:bg-[#0f172a] border-r border-slate-200 dark:border-slate-800 flex flex-col items-center py-6 z-20 shadow-xl transition-colors duration-300">
          {/* App Logo */}
-         <div className="mb-8">
-            <img src="./logo.svg" alt="Nebula" className="w-14 h-14 rounded-xl shadow-lg shadow-indigo-500/20 hover:scale-105 transition-transform" />
+         <div className="mb-8 p-3 bg-indigo-50 dark:bg-indigo-500/10 rounded-xl border border-indigo-200 dark:border-indigo-500/20">
+            <Cloud className="text-indigo-600 dark:text-indigo-500" size={28} />
          </div>
 
          {/* Nav Items */}
@@ -168,11 +168,17 @@ const App: React.FC = () => {
                   </div>
                </button>
                
-               {/* Window Controls Simulation (Visual Only) */}
-               <div className="flex items-center gap-2 ml-2">
-                   <div className="w-3 h-3 rounded-full bg-yellow-500/20 border border-yellow-500/50"></div>
-                   <div className="w-3 h-3 rounded-full bg-green-500/20 border border-green-500/50"></div>
-                   <div className="w-3 h-3 rounded-full bg-red-500/20 border border-red-500/50"></div>
+               {/* Window Controls (Consistent with Login) */}
+               <div className="flex items-center gap-1 ml-2 pl-2 border-l border-slate-200 dark:border-slate-800">
+                    <button className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors" title="Minimize">
+                        <Minus size={20} />
+                    </button>
+                    <button className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors" title="Maximize">
+                        <Square size={16} />
+                    </button>
+                    <button className="p-2 text-slate-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors" title="Close">
+                        <X size={20} />
+                    </button>
                </div>
             </div>
          </header>

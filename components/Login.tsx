@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Lock, Mail, ArrowRight, ShieldCheck, Server, ChevronUp, Globe, Activity, Check } from 'lucide-react';
+import { Lock, Mail, ArrowRight, ShieldCheck, Server, ChevronUp, Globe, Activity, Check, Minus, Square, X } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface LoginProps {
@@ -64,6 +64,20 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
   return (
     <div className="h-screen w-screen bg-slate-50 dark:bg-[#020617] flex items-center justify-center relative overflow-hidden font-sans select-none drag-region transition-colors duration-300">
+      
+      {/* Window Controls (Top Right) */}
+      <div className="absolute top-0 right-0 p-4 flex items-center gap-1 z-50 no-drag">
+        <button className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors" title="Minimize">
+            <Minus size={20} />
+        </button>
+        <button className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors" title="Maximize">
+            <Square size={16} />
+        </button>
+        <button className="p-2 text-slate-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors" title="Close">
+            <X size={20} />
+        </button>
+      </div>
+
       {/* Subtle Background Mesh */}
       <div className="absolute inset-0 z-0 opacity-30">
         <div className="absolute top-[-20%] left-[-20%] w-[60%] h-[60%] rounded-full bg-indigo-300/40 dark:bg-indigo-900/40 blur-[120px]"></div>
