@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Monitor, AppWindow, Play, Clock, MoreVertical, Star, X, Cpu, Zap, Globe, Server, Info, History, Power, PlugZap, Search } from 'lucide-react';
 import { VDIResource, ResourceType, ActivityLogEntry } from '../types';
 import { MOCK_RESOURCES, MOCK_ACTIVITY_LOG } from '../constants';
@@ -14,9 +14,11 @@ interface ModalProps {
   resource: VDIResource;
   onClose: () => void;
   onLaunch: (resource: VDIResource) => void;
+  isFavorite: boolean;
+  onToggleFavorite: () => void;
 }
 
-const ResourceDetailsModal: React.FC<ModalProps> = ({ resource, onClose, onLaunch }) => {
+const ResourceDetailsModal: React.FC<ModalProps> = ({ resource, onClose, onLaunch, isFavorite, onToggleFavorite }) => {
   const { t } = useLanguage();
   if (!resource) return null;
 
@@ -32,12 +34,29 @@ const ResourceDetailsModal: React.FC<ModalProps> = ({ resource, onClose, onLaunc
                 style={{ backgroundImage: `url('https://picsum.photos/seed/${resource.id}/600/400')` }}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-white dark:from-slate-900 to-transparent"></div>
-            <button 
-                onClick={onClose}
-                className="absolute top-4 right-4 p-2 bg-white/60 dark:bg-black/40 hover:bg-white dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white rounded-full transition-colors backdrop-blur-md border border-slate-200 dark:border-white/10"
-            >
-                <X size={18} />
-            </button>
+            
+            <div className="absolute top-4 right-4 flex items-center gap-2">
+                <button 
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onToggleFavorite();
+                    }}
+                    className={`p-2 rounded-full transition-all backdrop-blur-md border border-slate-200 dark:border-white/10 ${
+                        isFavorite 
+                        ? 'bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 border-yellow-500/30' 
+                        : 'bg-white/60 dark:bg-black/40 text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800'
+                    }`}
+                >
+                    <Star size={18} fill={isFavorite ? "currentColor" : "none"} className={isFavorite ? "scale-110" : ""} />
+                </button>
+                <button 
+                    onClick={onClose}
+                    className="p-2 bg-white/60 dark:bg-black/40 hover:bg-white dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white rounded-full transition-colors backdrop-blur-md border border-slate-200 dark:border-white/10"
+                >
+                    <X size={18} />
+                </button>
+            </div>
+
             <div className="absolute bottom-4 left-6">
                  <div className="flex items-center gap-2 mb-1">
                     {resource.type === ResourceType.DESKTOP ? <Monitor size={16} className="text-indigo-600 dark:text-indigo-400"/> : <AppWindow size={16} className="text-pink-600 dark:text-pink-400"/>}
@@ -120,7 +139,28 @@ const ResourceDetailsModal: React.FC<ModalProps> = ({ resource, onClose, onLaunc
 const Dashboard: React.FC<DashboardProps> = ({ onLaunch, category, searchQuery }) => {
   const [selectedResource, setSelectedResource] = useState<VDIResource | null>(null);
   const [showActivityLog, setShowActivityLog] = useState(false);
+  
+  // Favorites State with LocalStorage Persistence
+  const [favorites, setFavorites] = useState<string[]>(() => {
+    try {
+        const saved = localStorage.getItem('nebula_favorites');
+        return saved ? JSON.parse(saved) : ['res-1'];
+    } catch (e) {
+        return ['res-1'];
+    }
+  });
+
   const { t } = useLanguage();
+
+  useEffect(() => {
+    localStorage.setItem('nebula_favorites', JSON.stringify(favorites));
+  }, [favorites]);
+
+  const toggleFavorite = (id: string) => {
+    setFavorites(prev => 
+        prev.includes(id) ? prev.filter(favId => favId !== id) : [...prev, id]
+    );
+  };
 
   // Helper to filter resources based on search query
   const filterResources = (resources: VDIResource[]) => {
@@ -145,84 +185,96 @@ const Dashboard: React.FC<DashboardProps> = ({ onLaunch, category, searchQuery }
   const visibleResources = filterResources(baseResources);
   const runningResources = filterResources(MOCK_RESOURCES.filter(r => r.status === 'running'));
 
-  const ResourceCard = ({ resource, large = false }: { resource: VDIResource, large?: boolean }) => (
-    <div 
-      onClick={() => setSelectedResource(resource)}
-      className={`group relative bg-white dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700/50 hover:border-indigo-400 dark:hover:border-indigo-500/50 rounded-xl transition-all duration-200 overflow-hidden flex flex-col cursor-pointer shadow-sm dark:shadow-none ${large ? 'col-span-2 row-span-2' : ''}`}
-    >
-      {/* Card Header / Image Placeholder */}
-      <div className={`relative w-full ${large ? 'h-48' : 'h-32'} bg-slate-100 dark:bg-slate-900 overflow-hidden`}>
+  const ResourceCard = ({ resource, large = false }: { resource: VDIResource, large?: boolean }) => {
+    const isFavorite = favorites.includes(resource.id);
+    
+    return (
         <div 
-            className="absolute inset-0 bg-cover bg-center opacity-80 dark:opacity-60 group-hover:opacity-100 dark:group-hover:opacity-80 transition-opacity duration-300"
-            style={{ backgroundImage: `url('https://picsum.photos/seed/${resource.id}/600/400')` }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-white dark:from-slate-900 to-transparent"></div>
-        
-        {/* Status Indicator */}
-        <div className="absolute top-3 right-3 flex gap-2">
-            {resource.status === 'running' && (
-                <span className="px-2 py-1 rounded-md bg-white/80 dark:bg-emerald-500/20 backdrop-blur-md border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold uppercase tracking-wider shadow-sm">
-                    {t('dash.running')}
-                </span>
-            )}
-             {resource.status === 'stopped' && (
-                <span className="px-2 py-1 rounded-md bg-white/80 dark:bg-slate-500/20 backdrop-blur-md border border-slate-500/30 text-slate-600 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider shadow-sm">
-                    {t('dash.stopped')}
-                </span>
-            )}
-            {resource.status === 'maintenance' && (
-                <span className="px-2 py-1 rounded-md bg-white/80 dark:bg-amber-500/20 backdrop-blur-md border border-amber-500/30 text-amber-600 dark:text-amber-400 text-[10px] font-bold uppercase tracking-wider shadow-sm">
-                    {t('dash.maintenance')}
-                </span>
-            )}
-        </div>
-        
-        {/* Icon Overlay */}
-        <div className="absolute bottom-3 left-3 p-2 rounded-lg bg-white/80 dark:bg-slate-900/80 backdrop-blur border border-slate-200 dark:border-slate-700 text-indigo-600 dark:text-indigo-400 shadow-lg">
-            {resource.type === ResourceType.DESKTOP ? <Monitor size={20} /> : <AppWindow size={20} />}
-        </div>
-        
-        {/* Info Icon (Hover only) */}
-        <div className="absolute top-3 left-3 opacity-0 group-hover:opacity-100 transition-opacity">
-            <div className="p-1.5 rounded-full bg-black/40 backdrop-blur text-white/90 border border-white/20">
-                <Info size={14} />
+          onClick={() => setSelectedResource(resource)}
+          className={`group relative bg-white dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700/50 hover:border-indigo-400 dark:hover:border-indigo-500/50 rounded-xl transition-all duration-200 overflow-hidden flex flex-col cursor-pointer shadow-sm dark:shadow-none ${large ? 'col-span-2 row-span-2' : ''}`}
+        >
+          {/* Card Header / Image Placeholder */}
+          <div className={`relative w-full ${large ? 'h-48' : 'h-32'} bg-slate-100 dark:bg-slate-900 overflow-hidden`}>
+            <div 
+                className="absolute inset-0 bg-cover bg-center opacity-80 dark:opacity-60 group-hover:opacity-100 dark:group-hover:opacity-80 transition-opacity duration-300"
+                style={{ backgroundImage: `url('https://picsum.photos/seed/${resource.id}/600/400')` }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-white dark:from-slate-900 to-transparent"></div>
+            
+            {/* Status Indicator */}
+            <div className="absolute top-3 right-3 flex gap-2">
+                {resource.status === 'running' && (
+                    <span className="px-2 py-1 rounded-md bg-white/80 dark:bg-emerald-500/20 backdrop-blur-md border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold uppercase tracking-wider shadow-sm">
+                        {t('dash.running')}
+                    </span>
+                )}
+                 {resource.status === 'stopped' && (
+                    <span className="px-2 py-1 rounded-md bg-white/80 dark:bg-slate-500/20 backdrop-blur-md border border-slate-500/30 text-slate-600 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider shadow-sm">
+                        {t('dash.stopped')}
+                    </span>
+                )}
+                {resource.status === 'maintenance' && (
+                    <span className="px-2 py-1 rounded-md bg-white/80 dark:bg-amber-500/20 backdrop-blur-md border border-amber-500/30 text-amber-600 dark:text-amber-400 text-[10px] font-bold uppercase tracking-wider shadow-sm">
+                        {t('dash.maintenance')}
+                    </span>
+                )}
             </div>
-        </div>
-      </div>
-
-      {/* Card Content */}
-      <div className="p-4 flex-1 flex flex-col">
-        <div className="flex justify-between items-start mb-2">
-            <div>
-                <h3 className="text-slate-800 dark:text-white font-medium truncate pr-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition-colors">{resource.name}</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">{resource.os}</p>
+            
+            {/* Icon Overlay */}
+            <div className="absolute bottom-3 left-3 p-2 rounded-lg bg-white/80 dark:bg-slate-900/80 backdrop-blur border border-slate-200 dark:border-slate-700 text-indigo-600 dark:text-indigo-400 shadow-lg">
+                {resource.type === ResourceType.DESKTOP ? <Monitor size={20} /> : <AppWindow size={20} />}
             </div>
-            <button 
-                className="text-slate-400 dark:text-slate-500 hover:text-yellow-500 dark:hover:text-yellow-400 transition-colors"
-                onClick={(e) => { e.stopPropagation(); /* Add Favorite Logic */ }}
-            >
-                <Star size={16} />
-            </button>
-        </div>
-
-        <div className="mt-auto pt-4 flex items-center justify-between">
-            <div className="flex flex-col">
-                <span className="text-[10px] text-slate-500 uppercase tracking-wider">{t('dash.region')}</span>
-                <span className="text-xs text-slate-700 dark:text-slate-300">{resource.region.split(' ')[0]}</span>
+            
+            {/* Info Icon (Hover only) */}
+            <div className="absolute top-3 left-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="p-1.5 rounded-full bg-black/40 backdrop-blur text-white/90 border border-white/20">
+                    <Info size={14} />
+                </div>
             </div>
-            <button 
-                onClick={(e) => {
-                    e.stopPropagation();
-                    onLaunch(resource);
-                }}
-                className="flex items-center gap-2 px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-md shadow-lg shadow-indigo-600/20 transition-all active:scale-95"
-            >
-                <Play size={12} fill="currentColor" /> {t('dash.launch')}
-            </button>
+          </div>
+    
+          {/* Card Content */}
+          <div className="p-4 flex-1 flex flex-col">
+            <div className="flex justify-between items-start mb-2">
+                <div>
+                    <h3 className="text-slate-800 dark:text-white font-medium truncate pr-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition-colors">{resource.name}</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{resource.os}</p>
+                </div>
+                <button 
+                    className={`p-1.5 rounded-full transition-all duration-200 active:scale-90 focus:outline-none focus:ring-2 focus:ring-yellow-500/50 ${
+                        isFavorite 
+                        ? 'text-yellow-500 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20' 
+                        : 'text-slate-300 dark:text-slate-600 hover:text-yellow-500 dark:hover:text-yellow-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+                    }`}
+                    onClick={(e) => { 
+                        e.stopPropagation(); 
+                        toggleFavorite(resource.id);
+                    }}
+                    title={isFavorite ? "Remove from favorites" : "Add to favorites"}
+                >
+                    <Star size={18} fill={isFavorite ? "currentColor" : "none"} className={`transition-transform duration-300 ${isFavorite ? 'scale-110' : 'scale-100'}`} />
+                </button>
+            </div>
+    
+            <div className="mt-auto pt-4 flex items-center justify-between">
+                <div className="flex flex-col">
+                    <span className="text-[10px] text-slate-500 uppercase tracking-wider">{t('dash.region')}</span>
+                    <span className="text-xs text-slate-700 dark:text-slate-300">{resource.region.split(' ')[0]}</span>
+                </div>
+                <button 
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onLaunch(resource);
+                    }}
+                    className="flex items-center gap-2 px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-md shadow-lg shadow-indigo-600/20 transition-all active:scale-95"
+                >
+                    <Play size={12} fill="currentColor" /> {t('dash.launch')}
+                </button>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
-  );
+      );
+  };
 
   return (
     <div className="relative space-y-8 animate-fade-in pb-20">
@@ -232,6 +284,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onLaunch, category, searchQuery }
             resource={selectedResource} 
             onClose={() => setSelectedResource(null)}
             onLaunch={onLaunch}
+            isFavorite={favorites.includes(selectedResource.id)}
+            onToggleFavorite={() => toggleFavorite(selectedResource.id)}
           />
       )}
       
