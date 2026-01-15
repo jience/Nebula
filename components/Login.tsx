@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Cloud, Lock, Mail, ArrowRight, ShieldCheck, Server, ChevronUp, Globe, Activity, Check } from 'lucide-react';
+import { Lock, Mail, ArrowRight, ShieldCheck, Server, ChevronUp, Globe, Activity, Check } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface LoginProps {
@@ -72,10 +72,12 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
       <div className="w-[400px] z-10 animate-fade-in-up">
         {/* Logo Section */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-white dark:bg-gradient-to-br dark:from-slate-800 dark:to-slate-900 border border-slate-200 dark:border-slate-700 shadow-xl dark:shadow-2xl dark:shadow-black/50 mb-6">
-            <Cloud size={40} className="text-indigo-600 dark:text-indigo-500 drop-shadow-sm dark:drop-shadow-lg" />
-          </div>
+        <div className="text-center mb-8 flex flex-col items-center">
+          <img 
+            src="./logo.svg" 
+            alt="Nebula Logo" 
+            className="w-24 h-24 mb-6 drop-shadow-2xl hover:scale-105 transition-transform duration-500" 
+          />
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">{t('login.title')}</h1>
           <p className="text-sm text-slate-500 mt-1">{t('login.subtitle')}</p>
         </div>
