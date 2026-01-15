@@ -1,14 +1,50 @@
-import React, { useState } from 'react';
-import { Cloud, Lock, Mail, ArrowRight, ShieldCheck, Server } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Cloud, Lock, Mail, ArrowRight, ShieldCheck, Server, ChevronUp, Globe, Activity, Check } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface LoginProps {
   onLogin: () => void;
 }
 
+interface Gateway {
+  id: string;
+  name: string;
+  host: string;
+  baseLatency: number;
+}
+
+const GATEWAYS: Gateway[] = [
+  { id: 'us-east', name: 'US East (Virginia)', host: 'us-east-1.nebula.net', baseLatency: 20 },
+  { id: 'us-west', name: 'US West (Oregon)', host: 'us-west-2.nebula.net', baseLatency: 65 },
+  { id: 'eu-west', name: 'Europe (London)', host: 'eu-west-2.nebula.net', baseLatency: 110 },
+  { id: 'ap-ne', name: 'Asia Pacific (Tokyo)', host: 'ap-northeast-1.nebula.net', baseLatency: 160 },
+];
+
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [loading, setLoading] = useState(false);
   const { t } = useLanguage();
+  
+  // Gateway State
+  const [showGateways, setShowGateways] = useState(false);
+  const [selectedGateway, setSelectedGateway] = useState<Gateway>(GATEWAYS[0]);
+  const [latencies, setLatencies] = useState<Record<string, number>>({});
+
+  // Simulate pinging gateways
+  useEffect(() => {
+    const updateLatencies = () => {
+      const newLatencies: Record<string, number> = {};
+      GATEWAYS.forEach(gw => {
+        // Add some jitter to the base latency
+        const jitter = Math.floor(Math.random() * 10) - 5;
+        newLatencies[gw.id] = Math.max(1, gw.baseLatency + jitter);
+      });
+      setLatencies(newLatencies);
+    };
+
+    updateLatencies();
+    const interval = setInterval(updateLatencies, 3000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,6 +54,12 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       setLoading(false);
       onLogin();
     }, 1500);
+  };
+
+  const getLatencyColor = (ms: number) => {
+    if (ms < 80) return 'text-emerald-500';
+    if (ms < 150) return 'text-yellow-500';
+    return 'text-red-500';
   };
 
   return (
@@ -39,7 +81,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         </div>
 
         {/* Login Card */}
-        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl dark:shadow-2xl p-8">
+        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl dark:shadow-2xl p-8 relative">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-1">
               <label className="text-[10px] uppercase font-bold text-slate-500 tracking-wider ml-1">{t('login.email')}</label>
@@ -96,13 +138,66 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             </button>
           </form>
 
-          {/* Footer Info */}
-          <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-[10px] text-slate-500">
-             <div className="flex items-center gap-1.5">
-                 <Server size={12} />
-                 <span>{t('status.gateway')}: us-east-1.nebula.net</span>
+          {/* Footer Info with Interactive Gateway Selector */}
+          <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-[10px] text-slate-500 relative">
+             <div className="relative">
+                 <button 
+                    type="button"
+                    onClick={() => setShowGateways(!showGateways)}
+                    className="flex items-center gap-1.5 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors group"
+                 >
+                     <Server size={12} className="group-hover:scale-110 transition-transform" />
+                     <span className="font-medium">{t('status.gateway')}:</span>
+                     <span className="font-mono text-slate-600 dark:text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">{selectedGateway.host}</span>
+                     <ChevronUp size={10} className={`transition-transform duration-200 ${showGateways ? 'rotate-180' : ''}`} />
+                 </button>
+
+                 {/* Dropdown Menu */}
+                 {showGateways && (
+                    <>
+                        <div className="fixed inset-0 z-10" onClick={() => setShowGateways(false)}></div>
+                        <div className="absolute bottom-full left-0 mb-3 w-72 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl z-20 overflow-hidden animate-in fade-in zoom-in-95 duration-200 origin-bottom-left">
+                            <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex justify-between items-center">
+                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                                    <Globe size={12} /> Select Access Point
+                                </span>
+                                <Activity size={12} className="text-slate-400" />
+                            </div>
+                            <div className="p-1">
+                                {GATEWAYS.map(gw => (
+                                    <button
+                                        key={gw.id}
+                                        onClick={() => {
+                                            setSelectedGateway(gw);
+                                            setShowGateways(false);
+                                        }}
+                                        className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs transition-all ${
+                                            selectedGateway.id === gw.id
+                                            ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 ring-1 ring-indigo-500/20'
+                                            : 'hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
+                                        }`}
+                                    >
+                                        <div className="flex flex-col items-start gap-0.5">
+                                            <span className="font-semibold flex items-center gap-2">
+                                                {gw.name}
+                                                {selectedGateway.id === gw.id && <Check size={10} strokeWidth={4} />}
+                                            </span>
+                                            <span className="text-[10px] text-slate-400">{gw.host}</span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-900 rounded px-1.5 py-0.5 border border-slate-200 dark:border-slate-700">
+                                            <div className={`w-1.5 h-1.5 rounded-full ${latencies[gw.id] < 100 ? 'bg-emerald-500' : latencies[gw.id] < 150 ? 'bg-amber-500' : 'bg-red-500'}`}></div>
+                                            <span className={`font-mono font-medium ${getLatencyColor(latencies[gw.id] || 999)}`}>
+                                                {latencies[gw.id] || '--'} ms
+                                            </span>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </>
+                 )}
              </div>
-             <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-500">
+             <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded-full border border-emerald-500/20">
                  <ShieldCheck size={12} />
                  <span>{t('login.secure')}</span>
              </div>
