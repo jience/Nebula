@@ -2,7 +2,7 @@
 
 Nebula VDI Client is a modern, high-performance web-based Virtual Desktop Infrastructure (VDI) client interface. It simulates a native application experience for accessing cloud desktops and virtual applications, featuring a sleek UI, dark mode support, internationalization, and an AI-powered support assistant.
 
-![Nebula VDI Client](https://picsum.photos/seed/nebula-banner/800/400)
+![Nebula VDI Client](./preview.png)
 
 ## ✨ Features
 
