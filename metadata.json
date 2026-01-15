@@ -1,0 +1,5 @@
+{
+  "name": "Nebula VDI Client",
+  "description": "High-performance native-style VDI client for accessing cloud desktops and virtual applications.",
+  "requestFramePermissions": []
+}
