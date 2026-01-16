@@ -185,90 +185,102 @@ const Dashboard: React.FC<DashboardProps> = ({ onLaunch, category, searchQuery }
   const visibleResources = filterResources(baseResources);
   const runningResources = filterResources(MOCK_RESOURCES.filter(r => r.status === 'running'));
 
-  const ResourceCard = ({ resource, large = false }: { resource: VDIResource, large?: boolean }) => {
+  const ResourceCard: React.FC<{ resource: VDIResource, large?: boolean }> = ({ resource, large = false }) => {
     const isFavorite = favorites.includes(resource.id);
     
     return (
         <div 
           onClick={() => setSelectedResource(resource)}
-          className={`group relative bg-white dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700/50 hover:border-indigo-400 dark:hover:border-indigo-500/50 rounded-xl transition-all duration-200 overflow-hidden flex flex-col cursor-pointer shadow-sm dark:shadow-none ${large ? 'col-span-2 row-span-2' : ''}`}
+          className={`group relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 rounded-2xl transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-indigo-300/50 dark:hover:border-indigo-500/50 overflow-hidden flex flex-col cursor-pointer ${large ? 'col-span-1 md:col-span-2 row-span-2' : ''}`}
         >
-          {/* Card Header / Image Placeholder */}
-          <div className={`relative w-full ${large ? 'h-48' : 'h-32'} bg-slate-100 dark:bg-slate-900 overflow-hidden`}>
+          {/* Card Header / Image Area */}
+          <div className={`relative w-full ${large ? 'h-56' : 'h-36'} overflow-hidden bg-slate-100 dark:bg-slate-900`}>
+            {/* Background Image with Zoom Effect */}
             <div 
-                className="absolute inset-0 bg-cover bg-center opacity-80 dark:opacity-60 group-hover:opacity-100 dark:group-hover:opacity-80 transition-opacity duration-300"
+                className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110"
                 style={{ backgroundImage: `url('https://picsum.photos/seed/${resource.id}/600/400')` }}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-white dark:from-slate-900 to-transparent"></div>
             
-            {/* Status Indicator */}
-            <div className="absolute top-3 right-3 flex gap-2">
-                {resource.status === 'running' && (
-                    <span className="px-2 py-1 rounded-md bg-white/80 dark:bg-emerald-500/20 backdrop-blur-md border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold uppercase tracking-wider shadow-sm">
-                        {t('dash.running')}
-                    </span>
-                )}
-                 {resource.status === 'stopped' && (
-                    <span className="px-2 py-1 rounded-md bg-white/80 dark:bg-slate-500/20 backdrop-blur-md border border-slate-500/30 text-slate-600 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider shadow-sm">
-                        {t('dash.stopped')}
-                    </span>
-                )}
-                {resource.status === 'maintenance' && (
-                    <span className="px-2 py-1 rounded-md bg-white/80 dark:bg-amber-500/20 backdrop-blur-md border border-amber-500/30 text-amber-600 dark:text-amber-400 text-[10px] font-bold uppercase tracking-wider shadow-sm">
-                        {t('dash.maintenance')}
-                    </span>
-                )}
+            {/* Gradient Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity"></div>
+            
+            {/* Status Indicator (Top Right) */}
+            <div className="absolute top-3 right-3 flex gap-2 z-10">
+                <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm backdrop-blur-md border ${
+                    resource.status === 'running' 
+                        ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-100' 
+                    : resource.status === 'maintenance'
+                        ? 'bg-amber-500/20 border-amber-500/30 text-amber-100'
+                        : 'bg-slate-500/30 border-slate-500/30 text-slate-200'
+                }`}>
+                     {resource.status === 'running' && t('dash.running')}
+                     {resource.status === 'stopped' && t('dash.stopped')}
+                     {resource.status === 'maintenance' && t('dash.maintenance')}
+                </span>
             </div>
             
-            {/* Icon Overlay */}
-            <div className="absolute bottom-3 left-3 p-2 rounded-lg bg-white/80 dark:bg-slate-900/80 backdrop-blur border border-slate-200 dark:border-slate-700 text-indigo-600 dark:text-indigo-400 shadow-lg">
-                {resource.type === ResourceType.DESKTOP ? <Monitor size={20} /> : <AppWindow size={20} />}
+            {/* Type Icon (Bottom Left on Image) */}
+            <div className="absolute bottom-3 left-3">
+                 <div className="p-2 rounded-xl bg-white/90 dark:bg-slate-900/90 backdrop-blur shadow-lg border border-white/20 dark:border-slate-700 text-indigo-600 dark:text-indigo-400">
+                    {resource.type === ResourceType.DESKTOP ? <Monitor size={18} /> : <AppWindow size={18} />}
+                 </div>
             </div>
-            
-            {/* Info Icon (Hover only) */}
-            <div className="absolute top-3 left-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                <div className="p-1.5 rounded-full bg-black/40 backdrop-blur text-white/90 border border-white/20">
-                    <Info size={14} />
-                </div>
-            </div>
+
+            {/* Favorite Button (Top Left) */}
+             <button 
+                className={`absolute top-3 left-3 p-2 rounded-full backdrop-blur-md transition-all duration-200 z-20 ${
+                    isFavorite 
+                    ? 'bg-yellow-400/20 text-yellow-300 hover:bg-yellow-400/30' 
+                    : 'bg-black/20 text-white/50 hover:bg-black/40 hover:text-white opacity-0 group-hover:opacity-100'
+                }`}
+                onClick={(e) => { 
+                    e.stopPropagation(); 
+                    toggleFavorite(resource.id);
+                }}
+            >
+                <Star size={16} fill={isFavorite ? "currentColor" : "none"} className={isFavorite ? "scale-110" : ""} />
+            </button>
           </div>
     
           {/* Card Content */}
-          <div className="p-4 flex-1 flex flex-col">
-            <div className="flex justify-between items-start mb-2">
-                <div>
-                    <h3 className="text-slate-800 dark:text-white font-medium truncate pr-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition-colors">{resource.name}</h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">{resource.os}</p>
+          <div className="p-5 flex-1 flex flex-col justify-between">
+            <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 truncate mb-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                    {resource.name}
+                </h3>
+                <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-4">
+                     <Server size={12} />
+                     <span className="truncate">{resource.os}</span>
                 </div>
-                <button 
-                    className={`p-1.5 rounded-full transition-all duration-200 active:scale-90 focus:outline-none focus:ring-2 focus:ring-yellow-500/50 ${
-                        isFavorite 
-                        ? 'text-yellow-500 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20' 
-                        : 'text-slate-300 dark:text-slate-600 hover:text-yellow-500 dark:hover:text-yellow-400 hover:bg-slate-100 dark:hover:bg-slate-700'
-                    }`}
-                    onClick={(e) => { 
-                        e.stopPropagation(); 
-                        toggleFavorite(resource.id);
-                    }}
-                    title={isFavorite ? "Remove from favorites" : "Add to favorites"}
-                >
-                    <Star size={18} fill={isFavorite ? "currentColor" : "none"} className={`transition-transform duration-300 ${isFavorite ? 'scale-110' : 'scale-100'}`} />
-                </button>
+
+                {/* Specs Grid (Mini) */}
+                <div className="grid grid-cols-2 gap-2 mb-4">
+                    <div className="flex items-center gap-1.5 p-1.5 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50">
+                        <Cpu size={12} className="text-slate-400" />
+                        <span className="text-xs font-medium text-slate-600 dark:text-slate-300">{resource.cpu} vCPU</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 p-1.5 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50">
+                        <Zap size={12} className="text-slate-400" />
+                        <span className="text-xs font-medium text-slate-600 dark:text-slate-300">{resource.ram} GB</span>
+                    </div>
+                </div>
             </div>
     
-            <div className="mt-auto pt-4 flex items-center justify-between">
-                <div className="flex flex-col">
-                    <span className="text-[10px] text-slate-500 uppercase tracking-wider">{t('dash.region')}</span>
-                    <span className="text-xs text-slate-700 dark:text-slate-300">{resource.region.split(' ')[0]}</span>
+            <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-700/50">
+                <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                    <Globe size={12} />
+                    <span className="truncate max-w-[80px]">{resource.region.split(' ')[0]}</span>
                 </div>
+                
                 <button 
                     onClick={(e) => {
                         e.stopPropagation();
                         onLaunch(resource);
                     }}
-                    className="flex items-center gap-2 px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-md shadow-lg shadow-indigo-600/20 transition-all active:scale-95"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-xs font-semibold rounded-lg transition-colors group-hover:shadow-sm"
                 >
-                    <Play size={12} fill="currentColor" /> {t('dash.launch')}
+                    <Play size={12} fill="currentColor" />
+                    {t('dash.launch')}
                 </button>
             </div>
           </div>
