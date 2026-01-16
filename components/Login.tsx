@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Lock, Mail, ArrowRight, ShieldCheck, Server, ChevronUp, Globe, Activity, Check, Minus, Square, X } from 'lucide-react';
+import { Lock, Mail, ArrowRight, ShieldCheck, Server, ChevronUp, Globe, Activity, Check, Minus, Square, X, Plus, Save } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface LoginProps {
@@ -13,7 +13,7 @@ interface Gateway {
   baseLatency: number;
 }
 
-const GATEWAYS: Gateway[] = [
+const DEFAULT_GATEWAYS: Gateway[] = [
   { id: 'us-east', name: 'US East (Virginia)', host: 'us-east-1.nebula.net', baseLatency: 20 },
   { id: 'us-west', name: 'US West (Oregon)', host: 'us-west-2.nebula.net', baseLatency: 65 },
   { id: 'eu-west', name: 'Europe (London)', host: 'eu-west-2.nebula.net', baseLatency: 110 },
@@ -26,14 +26,32 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   
   // Gateway State
   const [showGateways, setShowGateways] = useState(false);
-  const [selectedGateway, setSelectedGateway] = useState<Gateway>(GATEWAYS[0]);
+  
+  // Initialize gateways from local storage or defaults
+  const [gateways, setGateways] = useState<Gateway[]>(() => {
+    try {
+        const saved = localStorage.getItem('nebula_custom_gateways');
+        if (saved) {
+            return [...DEFAULT_GATEWAYS, ...JSON.parse(saved)];
+        }
+    } catch (e) {
+        console.error("Failed to load gateways", e);
+    }
+    return DEFAULT_GATEWAYS;
+  });
+
+  const [selectedGateway, setSelectedGateway] = useState<Gateway>(gateways[0]);
   const [latencies, setLatencies] = useState<Record<string, number>>({});
+  
+  // Add Gateway State
+  const [isAddingGateway, setIsAddingGateway] = useState(false);
+  const [newGatewayData, setNewGatewayData] = useState({ name: '', host: '' });
 
   // Simulate pinging gateways
   useEffect(() => {
     const updateLatencies = () => {
       const newLatencies: Record<string, number> = {};
-      GATEWAYS.forEach(gw => {
+      gateways.forEach(gw => {
         // Add some jitter to the base latency
         const jitter = Math.floor(Math.random() * 10) - 5;
         newLatencies[gw.id] = Math.max(1, gw.baseLatency + jitter);
@@ -44,7 +62,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     updateLatencies();
     const interval = setInterval(updateLatencies, 3000);
     return () => clearInterval(interval);
-  }, []);
+  }, [gateways]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,6 +72,28 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       setLoading(false);
       onLogin();
     }, 1500);
+  };
+
+  const handleAddGateway = () => {
+    if (!newGatewayData.name.trim() || !newGatewayData.host.trim()) return;
+    
+    const newGw: Gateway = {
+        id: `custom-${Date.now()}`,
+        name: newGatewayData.name,
+        host: newGatewayData.host,
+        baseLatency: Math.floor(Math.random() * 50) + 20 // Simulated
+    };
+
+    const updatedGateways = [...gateways, newGw];
+    setGateways(updatedGateways);
+    setSelectedGateway(newGw);
+    
+    // Save custom gateways to local storage (filter out defaults to avoid duplication logic complexity)
+    const customOnly = updatedGateways.filter(g => !DEFAULT_GATEWAYS.some(dg => dg.id === g.id));
+    localStorage.setItem('nebula_custom_gateways', JSON.stringify(customOnly));
+
+    setIsAddingGateway(false);
+    setNewGatewayData({ name: '', host: '' });
   };
 
   const getLatencyColor = (ms: number) => {
@@ -171,7 +211,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                  {/* Dropdown Menu */}
                  {showGateways && (
                     <>
-                        <div className="fixed inset-0 z-10" onClick={() => setShowGateways(false)}></div>
+                        <div className="fixed inset-0 z-10" onClick={() => { setShowGateways(false); setIsAddingGateway(false); }}></div>
                         <div className="absolute bottom-full left-0 mb-3 w-72 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl z-20 overflow-hidden animate-in fade-in zoom-in-95 duration-200 origin-bottom-left">
                             <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex justify-between items-center">
                                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
@@ -179,36 +219,82 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                                 </span>
                                 <Activity size={12} className="text-slate-400" />
                             </div>
-                            <div className="p-1">
-                                {GATEWAYS.map(gw => (
-                                    <button
-                                        key={gw.id}
-                                        onClick={() => {
-                                            setSelectedGateway(gw);
-                                            setShowGateways(false);
-                                        }}
-                                        className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs transition-all ${
-                                            selectedGateway.id === gw.id
-                                            ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 ring-1 ring-indigo-500/20'
-                                            : 'hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
-                                        }`}
+                            
+                            {!isAddingGateway ? (
+                                <div className="p-1 max-h-48 overflow-y-auto">
+                                    {gateways.map(gw => (
+                                        <button
+                                            key={gw.id}
+                                            onClick={() => {
+                                                setSelectedGateway(gw);
+                                                setShowGateways(false);
+                                            }}
+                                            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs transition-all ${
+                                                selectedGateway.id === gw.id
+                                                ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 ring-1 ring-indigo-500/20'
+                                                : 'hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
+                                            }`}
+                                        >
+                                            <div className="flex flex-col items-start gap-0.5">
+                                                <span className="font-semibold flex items-center gap-2">
+                                                    {gw.name}
+                                                    {selectedGateway.id === gw.id && <Check size={10} strokeWidth={4} />}
+                                                </span>
+                                                <span className="text-[10px] text-slate-400">{gw.host}</span>
+                                            </div>
+                                            <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-900 rounded px-1.5 py-0.5 border border-slate-200 dark:border-slate-700">
+                                                <div className={`w-1.5 h-1.5 rounded-full ${latencies[gw.id] < 100 ? 'bg-emerald-500' : latencies[gw.id] < 150 ? 'bg-amber-500' : 'bg-red-500'}`}></div>
+                                                <span className={`font-mono font-medium ${getLatencyColor(latencies[gw.id] || 999)}`}>
+                                                    {latencies[gw.id] || '--'} ms
+                                                </span>
+                                            </div>
+                                        </button>
+                                    ))}
+                                    <button 
+                                        onClick={() => setIsAddingGateway(true)}
+                                        className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-xs text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 font-medium transition-colors mt-1 border border-dashed border-indigo-200 dark:border-indigo-800"
                                     >
-                                        <div className="flex flex-col items-start gap-0.5">
-                                            <span className="font-semibold flex items-center gap-2">
-                                                {gw.name}
-                                                {selectedGateway.id === gw.id && <Check size={10} strokeWidth={4} />}
-                                            </span>
-                                            <span className="text-[10px] text-slate-400">{gw.host}</span>
-                                        </div>
-                                        <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-900 rounded px-1.5 py-0.5 border border-slate-200 dark:border-slate-700">
-                                            <div className={`w-1.5 h-1.5 rounded-full ${latencies[gw.id] < 100 ? 'bg-emerald-500' : latencies[gw.id] < 150 ? 'bg-amber-500' : 'bg-red-500'}`}></div>
-                                            <span className={`font-mono font-medium ${getLatencyColor(latencies[gw.id] || 999)}`}>
-                                                {latencies[gw.id] || '--'} ms
-                                            </span>
-                                        </div>
+                                        <Plus size={12} /> Add Custom Gateway
                                     </button>
-                                ))}
-                            </div>
+                                </div>
+                            ) : (
+                                <div className="p-3 space-y-3 bg-slate-50 dark:bg-slate-800/50">
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] text-slate-500 font-bold uppercase">Name</label>
+                                        <input 
+                                            type="text" 
+                                            value={newGatewayData.name}
+                                            onChange={(e) => setNewGatewayData({...newGatewayData, name: e.target.value})}
+                                            placeholder="e.g. Local Server"
+                                            className="w-full text-xs px-2 py-1.5 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-indigo-500 outline-none dark:text-white"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] text-slate-500 font-bold uppercase">Host / IP</label>
+                                        <input 
+                                            type="text" 
+                                            value={newGatewayData.host}
+                                            onChange={(e) => setNewGatewayData({...newGatewayData, host: e.target.value})}
+                                            placeholder="192.168.1.10"
+                                            className="w-full text-xs px-2 py-1.5 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-indigo-500 outline-none dark:text-white font-mono"
+                                        />
+                                    </div>
+                                    <div className="flex gap-2 pt-1">
+                                        <button 
+                                            onClick={() => setIsAddingGateway(false)}
+                                            className="flex-1 py-1.5 text-xs text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded hover:bg-slate-100 dark:hover:bg-slate-800"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button 
+                                            onClick={handleAddGateway}
+                                            className="flex-1 py-1.5 text-xs text-white bg-indigo-600 hover:bg-indigo-500 rounded flex items-center justify-center gap-1"
+                                        >
+                                            <Save size={12} /> Save
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </>
                  )}
