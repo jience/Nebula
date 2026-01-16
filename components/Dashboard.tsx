@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Monitor, AppWindow, Play, Clock, MoreVertical, Star, X, Cpu, Zap, Globe, Server, Info, History, Power, PlugZap, Search } from 'lucide-react';
+import { Monitor, AppWindow, Play, Clock, MoreVertical, Star, X, Cpu, Zap, Globe, Server, Info, History, Power, PlugZap, Search, Signal, Wifi, Laptop, Command } from 'lucide-react';
 import { VDIResource, ResourceType, ActivityLogEntry } from '../types';
 import { MOCK_RESOURCES, MOCK_ACTIVITY_LOG } from '../constants';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -187,101 +187,125 @@ const Dashboard: React.FC<DashboardProps> = ({ onLaunch, category, searchQuery }
 
   const ResourceCard: React.FC<{ resource: VDIResource, large?: boolean }> = ({ resource, large = false }) => {
     const isFavorite = favorites.includes(resource.id);
+    const isDesktop = resource.type === ResourceType.DESKTOP;
+    const isRunning = resource.status === 'running';
+    
+    // Simulate connection signal strength based on running status
+    const signalStrength = isRunning ? 4 : 0;
     
     return (
         <div 
           onClick={() => setSelectedResource(resource)}
-          className={`group relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 rounded-2xl transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-indigo-300/50 dark:hover:border-indigo-500/50 overflow-hidden flex flex-col cursor-pointer ${large ? 'col-span-1 md:col-span-2 row-span-2' : ''}`}
+          className={`group relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl transition-all duration-300 hover:shadow-xl hover:border-indigo-300 dark:hover:border-indigo-500 overflow-hidden flex flex-col cursor-pointer ${large ? 'col-span-1 md:col-span-2 row-span-2' : ''}`}
         >
-          {/* Card Header / Image Area */}
-          <div className={`relative w-full ${large ? 'h-56' : 'h-36'} overflow-hidden bg-slate-100 dark:bg-slate-900`}>
-            {/* Background Image with Zoom Effect */}
-            <div 
-                className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110"
-                style={{ backgroundImage: `url('https://picsum.photos/seed/${resource.id}/600/400')` }}
-            />
+          {/* Header / Preview Area */}
+          <div className={`relative w-full ${large ? 'h-56' : 'h-40'} overflow-hidden bg-slate-900 border-b border-slate-200 dark:border-slate-800`}>
             
-            {/* Gradient Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity"></div>
+            {/* Desktop: Screen Preview Style */}
+            {isDesktop && (
+                <>
+                    <div 
+                        className="absolute inset-x-2 top-2 bottom-0 bg-cover bg-center rounded-t-lg shadow-2xl transition-transform duration-500 group-hover:scale-[1.02] origin-bottom"
+                        style={{ backgroundImage: `url('https://picsum.photos/seed/${resource.id}/600/400')` }}
+                    />
+                     {/* Simulated Taskbar inside preview */}
+                     <div className="absolute inset-x-2 bottom-0 h-3 bg-slate-900/80 backdrop-blur-sm rounded-b-none z-10 flex items-center justify-center gap-0.5 opacity-80">
+                         <div className="w-1 h-1 bg-white/50 rounded-full"></div>
+                         <div className="w-1 h-1 bg-white/50 rounded-full"></div>
+                     </div>
+                </>
+            )}
+
+            {/* App: Icon Tile Style */}
+            {!isDesktop && (
+                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 dark:from-indigo-900/20 dark:to-purple-900/20 flex items-center justify-center group-hover:bg-indigo-50 dark:group-hover:bg-slate-800 transition-colors">
+                     <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, gray 1px, transparent 0)', backgroundSize: '20px 20px' }}></div>
+                     <div className="w-16 h-16 bg-white dark:bg-slate-700 rounded-2xl shadow-lg flex items-center justify-center z-10 group-hover:scale-110 transition-transform duration-300">
+                        <Command size={32} className="text-pink-500" />
+                     </div>
+                </div>
+            )}
             
-            {/* Status Indicator (Top Right) */}
-            <div className="absolute top-3 right-3 flex gap-2 z-10">
-                <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm backdrop-blur-md border ${
-                    resource.status === 'running' 
-                        ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-100' 
-                    : resource.status === 'maintenance'
-                        ? 'bg-amber-500/20 border-amber-500/30 text-amber-100'
-                        : 'bg-slate-500/30 border-slate-500/30 text-slate-200'
+            {/* Status Badge (Top Right) */}
+            <div className="absolute top-3 right-3 z-20">
+                <div className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider backdrop-blur-md border shadow-sm ${
+                     isRunning 
+                     ? 'bg-emerald-500/90 border-emerald-400 text-white' 
+                     : resource.status === 'maintenance'
+                         ? 'bg-amber-500/90 border-amber-400 text-white'
+                         : 'bg-slate-600/90 border-slate-500 text-slate-100'
                 }`}>
-                     {resource.status === 'running' && t('dash.running')}
-                     {resource.status === 'stopped' && t('dash.stopped')}
-                     {resource.status === 'maintenance' && t('dash.maintenance')}
-                </span>
-            </div>
-            
-            {/* Type Icon (Bottom Left on Image) */}
-            <div className="absolute bottom-3 left-3">
-                 <div className="p-2 rounded-xl bg-white/90 dark:bg-slate-900/90 backdrop-blur shadow-lg border border-white/20 dark:border-slate-700 text-indigo-600 dark:text-indigo-400">
-                    {resource.type === ResourceType.DESKTOP ? <Monitor size={18} /> : <AppWindow size={18} />}
-                 </div>
+                    <div className={`w-1.5 h-1.5 rounded-full bg-current ${isRunning ? 'animate-pulse' : ''}`}></div>
+                    {resource.status === 'running' && t('dash.running')}
+                    {resource.status === 'stopped' && t('dash.stopped')}
+                    {resource.status === 'maintenance' && t('dash.maintenance')}
+                </div>
             </div>
 
             {/* Favorite Button (Top Left) */}
              <button 
-                className={`absolute top-3 left-3 p-2 rounded-full backdrop-blur-md transition-all duration-200 z-20 ${
+                className={`absolute top-3 left-3 p-1.5 rounded-lg backdrop-blur-md transition-all duration-200 z-20 border ${
                     isFavorite 
-                    ? 'bg-yellow-400/20 text-yellow-300 hover:bg-yellow-400/30' 
-                    : 'bg-black/20 text-white/50 hover:bg-black/40 hover:text-white opacity-0 group-hover:opacity-100'
+                    ? 'bg-yellow-400/90 border-yellow-400 text-yellow-900 shadow-sm' 
+                    : 'bg-slate-900/40 border-white/10 text-white/70 hover:bg-slate-900/60 hover:text-white opacity-0 group-hover:opacity-100'
                 }`}
                 onClick={(e) => { 
                     e.stopPropagation(); 
                     toggleFavorite(resource.id);
                 }}
             >
-                <Star size={16} fill={isFavorite ? "currentColor" : "none"} className={isFavorite ? "scale-110" : ""} />
+                <Star size={14} fill={isFavorite ? "currentColor" : "none"} />
             </button>
-          </div>
-    
-          {/* Card Content */}
-          <div className="p-5 flex-1 flex flex-col justify-between">
-            <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 truncate mb-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                    {resource.name}
-                </h3>
-                <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-4">
-                     <Server size={12} />
-                     <span className="truncate">{resource.os}</span>
-                </div>
-
-                {/* Specs Grid (Mini) */}
-                <div className="grid grid-cols-2 gap-2 mb-4">
-                    <div className="flex items-center gap-1.5 p-1.5 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50">
-                        <Cpu size={12} className="text-slate-400" />
-                        <span className="text-xs font-medium text-slate-600 dark:text-slate-300">{resource.cpu} vCPU</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 p-1.5 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50">
-                        <Zap size={12} className="text-slate-400" />
-                        <span className="text-xs font-medium text-slate-600 dark:text-slate-300">{resource.ram} GB</span>
-                    </div>
-                </div>
-            </div>
-    
-            <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-700/50">
-                <div className="flex items-center gap-1.5 text-xs text-slate-400">
-                    <Globe size={12} />
-                    <span className="truncate max-w-[80px]">{resource.region.split(' ')[0]}</span>
-                </div>
-                
-                <button 
+            
+            {/* Hover Overlay with Connect Button */}
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center z-30">
+                 <button 
                     onClick={(e) => {
                         e.stopPropagation();
                         onLaunch(resource);
                     }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-xs font-semibold rounded-lg transition-colors group-hover:shadow-sm"
+                    className="flex items-center gap-2 px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-full shadow-xl transform scale-90 group-hover:scale-100 transition-all"
                 >
-                    <Play size={12} fill="currentColor" />
+                    <Play size={16} fill="currentColor" /> 
                     {t('dash.launch')}
                 </button>
+            </div>
+          </div>
+    
+          {/* Card Body */}
+          <div className="p-4 flex-1 flex flex-col">
+            <div className="flex items-start justify-between mb-2">
+                <div className="overflow-hidden">
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                        {resource.name}
+                    </h3>
+                    <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                         {isDesktop ? <Laptop size={12} /> : <AppWindow size={12} />}
+                         <span className="truncate">{resource.os}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div className="mt-auto pt-3 flex items-center justify-between border-t border-slate-100 dark:border-slate-700/50">
+                {/* Tech Specs */}
+                <div className="flex gap-2">
+                    <div className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700/50 text-[10px] font-mono font-medium text-slate-600 dark:text-slate-300 flex items-center gap-1" title="CPU">
+                        <Cpu size={10} /> {resource.cpu}
+                    </div>
+                    <div className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700/50 text-[10px] font-mono font-medium text-slate-600 dark:text-slate-300 flex items-center gap-1" title="Memory">
+                        <Zap size={10} /> {resource.ram}G
+                    </div>
+                </div>
+                
+                {/* Connection Quality Indicator */}
+                <div className="flex items-center gap-1 text-slate-400" title="Connection Quality">
+                    {signalStrength > 0 ? (
+                        <Wifi size={14} className="text-emerald-500" />
+                    ) : (
+                        <Wifi size={14} className="text-slate-300 dark:text-slate-600" />
+                    )}
+                    <span className="text-[10px] font-mono">{resource.region.includes('US') ? '24ms' : '110ms'}</span>
+                </div>
             </div>
           </div>
         </div>
