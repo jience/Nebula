@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Monitor, AppWindow, Play, Clock, MoreVertical, Star, X, Cpu, Zap, Globe, Server, Info, History, Power, PlugZap, Search, Signal, Wifi, Laptop, Command, PowerOff, RotateCcw, AlertTriangle, Loader2, CheckCircle2 } from 'lucide-react';
+import { Monitor, AppWindow, Play, Clock, MoreVertical, Star, X, Cpu, Zap, Globe, Server, Info, History, Power, PlugZap, Search, Signal, Wifi, Laptop, Command, PowerOff, RotateCcw, AlertTriangle, Loader2, CheckCircle2, Trash2, Filter } from 'lucide-react';
 import { VDIResource, ResourceType, ActivityLogEntry } from '../types';
 import { MOCK_RESOURCES, MOCK_ACTIVITY_LOG } from '../constants';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -192,8 +192,12 @@ const ResourceDetailsModal: React.FC<ModalProps> = ({ resource, onClose, onLaunc
 const Dashboard: React.FC<DashboardProps> = ({ onLaunch, category, searchQuery }) => {
   const [resources, setResources] = useState<VDIResource[]>(MOCK_RESOURCES);
   const [selectedResourceId, setSelectedResourceId] = useState<string | null>(null);
-  const [showActivityLog, setShowActivityLog] = useState(false);
   
+  // Activity Log State
+  const [showActivityLog, setShowActivityLog] = useState(false);
+  const [activityLog, setActivityLog] = useState<ActivityLogEntry[]>(MOCK_ACTIVITY_LOG);
+  const [logSearchQuery, setLogSearchQuery] = useState('');
+
   // Power Management States
   const [confirmationState, setConfirmationState] = useState<{ isOpen: boolean, resourceId: string, resourceName: string, type: 'shutdown' | 'force_off' | null }>({
       isOpen: false, resourceId: '', resourceName: '', type: null
@@ -239,6 +243,24 @@ const Dashboard: React.FC<DashboardProps> = ({ onLaunch, category, searchQuery }
       setToast({ show: true, message, type });
   };
 
+  const addActivityLog = (resource: VDIResource, action: ActivityLogEntry['action']) => {
+      const newEntry: ActivityLogEntry = {
+          id: `log-${Date.now()}`,
+          resourceId: resource.id,
+          resourceName: resource.name,
+          type: resource.type,
+          action,
+          timestamp: t('log.just_now')
+      };
+      setActivityLog(prev => [newEntry, ...prev]);
+  };
+
+  // Wrapper for launching to track history
+  const handleLaunchResource = (resource: VDIResource) => {
+      addActivityLog(resource, 'LAUNCHED');
+      onLaunch(resource);
+  };
+
   const executePowerAction = (resourceId: string, action: 'start' | 'shutdown' | 'force_off') => {
     // Add to processing state
     setProcessingResources(prev => new Set(prev).add(resourceId));
@@ -248,9 +270,19 @@ const Dashboard: React.FC<DashboardProps> = ({ onLaunch, category, searchQuery }
         setResources(prev => prev.map(r => {
             if (r.id !== resourceId) return r;
             
-            if (action === 'start') return { ...r, status: 'running' };
-            if (action === 'shutdown') return { ...r, status: 'stopped' };
-            if (action === 'force_off') return { ...r, status: 'stopped' };
+            // Log actions
+            if (action === 'start') {
+                addActivityLog(r, 'POWER_ON');
+                return { ...r, status: 'running' };
+            }
+            if (action === 'shutdown') {
+                addActivityLog(r, 'STOPPED');
+                return { ...r, status: 'stopped' };
+            }
+            if (action === 'force_off') {
+                addActivityLog(r, 'STOPPED');
+                return { ...r, status: 'stopped' };
+            }
             
             return r;
         }));
@@ -314,6 +346,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onLaunch, category, searchQuery }
   // Apply search filtering
   const visibleResources = filterResources(baseResources);
   const runningResources = filterResources(resources.filter(r => r.status === 'running'));
+
+  // Filter logs
+  const filteredLogs = activityLog.filter(log => 
+      log.resourceName.toLowerCase().includes(logSearchQuery.toLowerCase()) ||
+      log.action.toLowerCase().includes(logSearchQuery.toLowerCase())
+  );
 
   const ResourceCard: React.FC<{ resource: VDIResource, large?: boolean }> = ({ resource, large = false }) => {
     const isFavorite = favorites.includes(resource.id);
@@ -408,7 +446,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLaunch, category, searchQuery }
                                 <button 
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        onLaunch(resource);
+                                        handleLaunchResource(resource);
                                     }}
                                     className="flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-full shadow-xl transform scale-95 group-hover:scale-100 transition-all mb-2"
                                 >
@@ -457,7 +495,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLaunch, category, searchQuery }
                     <button 
                         onClick={(e) => {
                             e.stopPropagation();
-                            onLaunch(resource);
+                            handleLaunchResource(resource);
                         }}
                         className="flex items-center gap-2 px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-full shadow-xl transform scale-90 group-hover:scale-100 transition-all"
                     >
@@ -532,7 +570,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLaunch, category, searchQuery }
           <ResourceDetailsModal 
             resource={selectedResource} 
             onClose={() => setSelectedResourceId(null)}
-            onLaunch={onLaunch}
+            onLaunch={handleLaunchResource}
             isFavorite={favorites.includes(selectedResource.id)}
             onToggleFavorite={() => toggleFavorite(selectedResource.id)}
           />
@@ -540,50 +578,79 @@ const Dashboard: React.FC<DashboardProps> = ({ onLaunch, category, searchQuery }
       
       {/* Activity Log Sidebar */}
       <div 
-        className={`fixed top-14 right-0 bottom-8 w-80 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-l border-slate-200 dark:border-slate-700 shadow-2xl z-30 transform transition-transform duration-300 ease-in-out ${showActivityLog ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`fixed top-14 right-0 bottom-8 w-80 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-l border-slate-200 dark:border-slate-700 shadow-2xl z-30 transform transition-transform duration-300 ease-in-out flex flex-col ${showActivityLog ? 'translate-x-0' : 'translate-x-full'}`}
       >
-        <div className="h-full flex flex-col">
-            <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50">
-                <h3 className="text-sm font-semibold text-slate-800 dark:text-white flex items-center gap-2">
-                    <History size={16} className="text-indigo-600 dark:text-indigo-400"/> {t('dash.recent_activity')}
-                </h3>
-                <button onClick={() => setShowActivityLog(false)} className="text-slate-400 hover:text-slate-800 dark:hover:text-white">
-                    <X size={16} />
-                </button>
-            </div>
-            <div className="flex-1 overflow-y-auto">
-                {MOCK_ACTIVITY_LOG.map((log) => (
-                    <div key={log.id} className="p-4 border-b border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+        <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50">
+            <h3 className="text-sm font-semibold text-slate-800 dark:text-white flex items-center gap-2">
+                <History size={16} className="text-indigo-600 dark:text-indigo-400"/> {t('dash.recent_activity')}
+            </h3>
+            <button onClick={() => setShowActivityLog(false)} className="text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors">
+                <X size={16} />
+            </button>
+        </div>
+
+        {/* Log Search & Filters */}
+        <div className="p-3 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex gap-2">
+             <div className="relative flex-1">
+                 <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                 <input 
+                    type="text" 
+                    value={logSearchQuery}
+                    onChange={(e) => setLogSearchQuery(e.target.value)}
+                    placeholder={t('log.search')}
+                    className="w-full bg-slate-100 dark:bg-slate-800 border-none rounded-md py-1.5 pl-8 pr-2 text-xs text-slate-900 dark:text-white placeholder-slate-500 focus:ring-1 focus:ring-indigo-500"
+                 />
+             </div>
+             <button 
+                onClick={() => setActivityLog([])}
+                className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                title={t('log.clear')}
+             >
+                 <Trash2 size={14} />
+             </button>
+        </div>
+
+        {/* Log List */}
+        <div className="flex-1 overflow-y-auto">
+            {filteredLogs.length > 0 ? (
+                filteredLogs.map((log) => (
+                    <div key={log.id} className="p-4 border-b border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
                         <div className="flex items-start gap-3">
-                            <div className="p-2 rounded bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 mt-1">
+                            <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 mt-1 shadow-sm">
                                 {log.type === ResourceType.DESKTOP ? <Monitor size={14} /> : <AppWindow size={14} />}
                             </div>
                             <div className="flex-1 min-w-0">
                                 <h4 className="text-sm font-medium text-slate-800 dark:text-white truncate">{log.resourceName}</h4>
-                                <div className="flex items-center gap-1.5 mt-1">
+                                <div className="flex items-center gap-1.5 mt-1.5">
                                     {log.action === 'LAUNCHED' && <Play size={10} className="text-emerald-500 dark:text-emerald-400" />}
                                     {log.action === 'STOPPED' && <Power size={10} className="text-slate-400" />}
                                     {log.action === 'DISCONNECTED' && <PlugZap size={10} className="text-amber-500 dark:text-amber-400" />}
-                                    <span className={`text-xs font-medium uppercase ${
+                                    {log.action === 'POWER_ON' && <Zap size={10} className="text-blue-500 dark:text-blue-400" />}
+                                    <span className={`text-[10px] font-bold uppercase tracking-wider ${
                                         log.action === 'LAUNCHED' ? 'text-emerald-600 dark:text-emerald-400' :
-                                        log.action === 'DISCONNECTED' ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500 dark:text-slate-400'
+                                        log.action === 'DISCONNECTED' ? 'text-amber-600 dark:text-amber-400' : 
+                                        log.action === 'POWER_ON' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'
                                     }`}>
-                                        {log.action}
+                                        {log.action.replace('_', ' ')}
                                     </span>
                                 </div>
                             </div>
                         </div>
                         <div className="mt-2 text-right">
-                             <span className="text-[10px] text-slate-500">{log.timestamp}</span>
+                             <span className="text-[10px] font-mono text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors">{log.timestamp}</span>
                         </div>
                     </div>
-                ))}
-            </div>
-            <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
-                <button className="w-full py-2 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 rounded border border-slate-200 dark:border-slate-700 transition-colors">
-                    {t('dash.view_full')}
-                </button>
-            </div>
+                ))
+            ) : (
+                <div className="flex flex-col items-center justify-center h-48 text-slate-400">
+                    <Filter size={24} className="mb-2 opacity-50" />
+                    <p className="text-xs">{t('log.empty')}</p>
+                </div>
+            )}
+        </div>
+        
+        <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 text-[10px] text-center text-slate-400">
+            Showing {filteredLogs.length} events
         </div>
       </div>
 
