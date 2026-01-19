@@ -1,10 +1,11 @@
-import { ResourceType, VDIResource, ActivityLogEntry, User } from './types';
+import { ResourceType, ResourceSubType, VDIResource, ActivityLogEntry, User } from './types';
 
 export const MOCK_RESOURCES: VDIResource[] = [
   {
     id: 'res-1',
     name: 'Dev Workstation Alpha',
     type: ResourceType.DESKTOP,
+    subType: ResourceSubType.DESKTOP_EXCLUSIVE,
     os: 'Windows 11 Pro',
     status: 'running',
     region: 'US-East (N. Virginia)',
@@ -15,6 +16,7 @@ export const MOCK_RESOURCES: VDIResource[] = [
     id: 'res-2',
     name: 'Linux Build Server',
     type: ResourceType.DESKTOP,
+    subType: ResourceSubType.DESKTOP_SHARED,
     os: 'Ubuntu 22.04 LTS',
     status: 'stopped',
     region: 'EU-West (London)',
@@ -25,6 +27,7 @@ export const MOCK_RESOURCES: VDIResource[] = [
     id: 'res-3',
     name: 'VS Code Remote',
     type: ResourceType.APPLICATION,
+    subType: ResourceSubType.APP_EXCLUSIVE,
     os: 'vApp',
     status: 'running',
     region: 'US-East (N. Virginia)',
@@ -35,6 +38,7 @@ export const MOCK_RESOURCES: VDIResource[] = [
     id: 'res-4',
     name: 'SAP GUI',
     type: ResourceType.APPLICATION,
+    subType: ResourceSubType.APP_SHARED,
     os: 'vApp',
     status: 'maintenance',
     region: 'Asia-Pacific (Tokyo)',
@@ -43,13 +47,14 @@ export const MOCK_RESOURCES: VDIResource[] = [
   },
   {
     id: 'res-5',
-    name: 'Creative Suite Host',
+    name: 'Training Lab PC',
     type: ResourceType.DESKTOP,
-    os: 'macOS Sonoma',
+    subType: ResourceSubType.DESKTOP_REVERTIBLE,
+    os: 'Windows 10 Enterprise',
     status: 'running',
     region: 'US-West (Oregon)',
-    cpu: 12,
-    ram: 64
+    cpu: 4,
+    ram: 8
   }
 ];
 
@@ -112,7 +117,7 @@ export const MOCK_ACTIVITY_LOG: ActivityLogEntry[] = [
   {
     id: 'log-5',
     resourceId: 'res-5',
-    resourceName: 'Creative Suite Host',
+    resourceName: 'Training Lab PC',
     type: ResourceType.DESKTOP,
     action: 'DISCONNECTED',
     timestamp: 'Yesterday, 5:30 PM'
@@ -120,7 +125,7 @@ export const MOCK_ACTIVITY_LOG: ActivityLogEntry[] = [
   {
     id: 'log-6',
     resourceId: 'res-5',
-    resourceName: 'Creative Suite Host',
+    resourceName: 'Training Lab PC',
     type: ResourceType.DESKTOP,
     action: 'LAUNCHED',
     timestamp: 'Yesterday, 9:00 AM'

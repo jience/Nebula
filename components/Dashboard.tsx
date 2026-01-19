@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Monitor, AppWindow, Play, Clock, MoreVertical, Star, X, Cpu, Zap, Globe, Server, Info, History, Power, PlugZap, Search, Signal, Wifi, Laptop, Command, PowerOff, RotateCcw, AlertTriangle, Loader2, CheckCircle2, Trash2, Filter } from 'lucide-react';
-import { VDIResource, ResourceType, ActivityLogEntry } from '../types';
+import { Monitor, AppWindow, Play, Clock, MoreVertical, Star, X, Cpu, Zap, Globe, Server, Info, History, Power, PlugZap, Search, Signal, Wifi, Laptop, Command, PowerOff, RotateCcw, AlertTriangle, Loader2, CheckCircle2, Trash2, Filter, Users, Shield, User, RefreshCw } from 'lucide-react';
+import { VDIResource, ResourceType, ResourceSubType, ActivityLogEntry } from '../types';
 import { MOCK_RESOURCES, MOCK_ACTIVITY_LOG } from '../constants';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -75,6 +75,18 @@ const ResourceDetailsModal: React.FC<ModalProps> = ({ resource, onClose, onLaunc
   const { t } = useLanguage();
   if (!resource) return null;
 
+  // Helper to get subtype info for modal
+  const getSubTypeLabel = (subType: ResourceSubType) => {
+    switch (subType) {
+        case ResourceSubType.DESKTOP_EXCLUSIVE: return t('subtype.desktop_exclusive');
+        case ResourceSubType.DESKTOP_SHARED: return t('subtype.desktop_shared');
+        case ResourceSubType.DESKTOP_REVERTIBLE: return t('subtype.desktop_revertible');
+        case ResourceSubType.APP_EXCLUSIVE: return t('subtype.app_exclusive');
+        case ResourceSubType.APP_SHARED: return t('subtype.app_shared');
+        default: return '';
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm animate-fade-in" onClick={onClose}></div>
@@ -114,6 +126,8 @@ const ResourceDetailsModal: React.FC<ModalProps> = ({ resource, onClose, onLaunc
                  <div className="flex items-center gap-2 mb-1">
                     {resource.type === ResourceType.DESKTOP ? <Monitor size={16} className="text-indigo-600 dark:text-indigo-400"/> : <AppWindow size={16} className="text-pink-600 dark:text-pink-400"/>}
                     <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">{resource.type}</span>
+                    <span className="text-xs text-slate-400">•</span>
+                    <span className="text-xs font-medium text-slate-600 dark:text-slate-300">{getSubTypeLabel(resource.subType)}</span>
                  </div>
                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{resource.name}</h2>
             </div>
@@ -389,6 +403,27 @@ const Dashboard: React.FC<DashboardProps> = ({ onLaunch, category, searchQuery }
     // Simulate connection signal strength based on running status
     const signalStrength = isRunning ? 4 : 0;
     
+    // Determine subtype icon and badge style
+    const getSubTypeInfo = (subType: ResourceSubType) => {
+        switch (subType) {
+            case ResourceSubType.DESKTOP_EXCLUSIVE:
+                return { icon: Shield, label: t('subtype.desktop_exclusive'), color: 'text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' };
+            case ResourceSubType.DESKTOP_SHARED:
+                return { icon: Users, label: t('subtype.desktop_shared'), color: 'text-blue-500 bg-blue-50 dark:bg-blue-900/20' };
+            case ResourceSubType.DESKTOP_REVERTIBLE:
+                return { icon: RefreshCw, label: t('subtype.desktop_revertible'), color: 'text-amber-500 bg-amber-50 dark:bg-amber-900/20' };
+            case ResourceSubType.APP_EXCLUSIVE:
+                return { icon: Shield, label: t('subtype.app_exclusive'), color: 'text-pink-500 bg-pink-50 dark:bg-pink-900/20' };
+            case ResourceSubType.APP_SHARED:
+                return { icon: Users, label: t('subtype.app_shared'), color: 'text-purple-500 bg-purple-50 dark:bg-purple-900/20' };
+            default:
+                return { icon: Info, label: 'Unknown', color: 'text-slate-500' };
+        }
+    }
+
+    const subTypeInfo = getSubTypeInfo(resource.subType);
+    const SubTypeIcon = subTypeInfo.icon;
+
     return (
         <div 
           onClick={() => !isProcessing && setSelectedResourceId(resource.id)}
@@ -540,9 +575,17 @@ const Dashboard: React.FC<DashboardProps> = ({ onLaunch, category, searchQuery }
                     <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                         {resource.name}
                     </h3>
-                    <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                         {isDesktop ? <Laptop size={12} /> : <AppWindow size={12} />}
-                         <span className="truncate">{resource.os}</span>
+                    <div className="flex items-center justify-between mt-1.5">
+                         <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                             {isDesktop ? <Laptop size={12} /> : <AppWindow size={12} />}
+                             <span className="truncate max-w-[100px]">{resource.os}</span>
+                         </div>
+                         
+                         {/* SubType Badge */}
+                         <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide border border-transparent ${subTypeInfo.color}`}>
+                             <SubTypeIcon size={10} />
+                             <span>{subTypeInfo.label}</span>
+                         </div>
                     </div>
                 </div>
             </div>
